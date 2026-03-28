@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-chatbot-backend
+    ports:
+      - "8085:8085"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_USE_MOCK_MODE=true
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend/ai-chatbot-ui
+      dockerfile: Dockerfile
+    container_name: ai-chatbot-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - chatbot-network
+    environment:
+      - API_URL=http://backend:8085/api
+
+networks:
+  chatbot-network:
+    driver: bridge

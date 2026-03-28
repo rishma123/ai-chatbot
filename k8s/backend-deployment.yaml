@@ -1,0 +1,70 @@
+# Kubernetes Deployment for Backend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-chatbot-backend
+  labels:
+    app: ai-chatbot-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-chatbot-backend
+  template:
+    metadata:
+      labels:
+        app: ai-chatbot-backend
+    spec:
+      containers:
+      - name: backend
+        image: ai-chatbot-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8085
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-secret
+              key: api-key
+              optional: true
+        - name: OPENAI_USE_MOCK_MODE
+          value: "true"
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8085
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-chatbot-backend-service
+spec:
+  selector:
+    app: ai-chatbot-backend
+  ports:
+  - protocol: TCP
+    port: 8085
+    targetPort: 8085
+  type: ClusterIP
